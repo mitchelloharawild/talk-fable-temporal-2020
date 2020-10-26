@@ -221,21 +221,21 @@ class: top
 
 ```{r tourism-total, echo = TRUE, fig.show='hide'}
 library(dplyr)
-holiday_aus <- tourism %>% 
+aus_holiday <- tourism %>% 
   filter(Purpose == "Holiday") %>% 
   summarise(Trips = sum(Trips))
 
-holiday_aus %>% 
+aus_holiday %>% 
   autoplot(Trips)
 ```
 
 .flex-row[
 ```{r tourism-total-print, echo = FALSE}
-holiday_aus
+aus_holiday
 ```
 .full-width[
 ```{r tourism-total-plot, echo = FALSE}
-holiday_aus %>% 
+aus_holiday %>% 
   autoplot(Trips)
 ```
 ]
@@ -255,7 +255,7 @@ class: top
 
 .left-code[
 ```{r tourism-total-ets-data, eval=FALSE, echo=TRUE}
-holiday_aus #<<
+aus_holiday #<<
 ```
 ]
 .right-plot[
@@ -278,7 +278,7 @@ class: top
 
 .left-code[
 ```{r tourism-total-ets-model, eval=FALSE, echo=TRUE}
-holiday_aus %>% 
+aus_holiday %>% 
   model(ETS(Trips)) #<<
 ```
 ]
@@ -301,7 +301,7 @@ class: top
 
 .left-code[
 ```{r tourism-total-ets-forecast, eval=FALSE, echo=TRUE}
-holiday_aus %>% 
+aus_holiday %>% 
   model(ETS(Trips)) %>% 
   forecast(h = "3 years") #<<
 ```
@@ -325,10 +325,10 @@ class: top
 
 .left-code[
 ```{r tourism-total-ets-plot, eval=FALSE, echo=TRUE}
-holiday_aus %>% 
+aus_holiday %>% 
   model(ETS(Trips)) %>% 
   forecast(h = "3 years") %>% 
-  autoplot(holiday_aus) #<<
+  autoplot(aus_holiday) #<<
 ```
 ]
 .right-plot[
@@ -482,6 +482,83 @@ data %>%
 
 
 ![](resources/graph_temporal.png)
+
+---
+
+# Temporal aggregations of Australian holidays
+
+```{r tourism-time-agg, echo = TRUE}
+library(moment)
+aus_holiday_temporal <- aus_holiday %>% 
+  aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1)), Trips = sum(Trips)) #<<
+```
+
+.pull-left[
+```{r tourism-time-agg-print, echo = FALSE}
+aus_holiday_temporal
+```
+]
+
+.pull-right[
+```{r tourism-time-agg-plot, fig.height = 5, fig.width = 8}
+autoplot(aus_holiday_temporal) + scale_y_log10()
+```
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+```{r tourism-time-agg-base, echo = TRUE, cache = TRUE}
+fc <- aus_holiday_temporal %>% 
+  model(ets = ETS(Trips)) %>% 
+  forecast(h = "3 years")
+```
+
+```{r tourism-time-agg-base-print, echo = FALSE}
+fc
+```
+
+]
+
+.pull-right[
+```{r tourism-time-agg-base-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc %>% 
+  autoplot(aus_holiday_temporal) + 
+  facet_grid(vars(fct_relevel(.interval, "1 quarter", after = Inf)),
+             scales = "free_y")
+```
+
+]
+
+--- 
+
+# Reconciling forecasts over time
+
+.pull-left[
+```{r tourism-time-agg-coherent, echo = TRUE, cache = TRUE}
+fc <- aus_holiday_temporal %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years")
+```
+
+```{r tourism-time-agg-coherent-print, echo = FALSE}
+fc
+```
+
+]
+
+.pull-right[
+```{r tourism-time-agg-coherent-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc %>% 
+  autoplot(aus_holiday_temporal, level = NULL) + 
+  facet_grid(vars(fct_relevel(.interval, "1 quarter", after = Inf)),
+             scales = "free_y")
+```
+
+]
 
 ---
 

@@ -194,11 +194,11 @@ class: top
 
 ```r
 library(dplyr)
-holiday_aus &lt;- tourism %&gt;% 
+aus_holiday &lt;- tourism %&gt;% 
   filter(Purpose == "Holiday") %&gt;% 
   summarise(Trips = sum(Trips))
 
-holiday_aus %&gt;% 
+aus_holiday %&gt;% 
   autoplot(Trips)
 ```
 
@@ -240,7 +240,7 @@ class: top
 .left-code[
 
 ```r
-*holiday_aus
+*aus_holiday
 ```
 ]
 .right-plot[
@@ -279,7 +279,7 @@ class: top
 .left-code[
 
 ```r
-holiday_aus %&gt;% 
+aus_holiday %&gt;% 
 * model(ETS(Trips))
 ```
 ]
@@ -308,7 +308,7 @@ class: top
 .left-code[
 
 ```r
-holiday_aus %&gt;% 
+aus_holiday %&gt;% 
   model(ETS(Trips)) %&gt;% 
 * forecast(h = "3 years")
 ```
@@ -350,10 +350,10 @@ class: top
 .left-code[
 
 ```r
-holiday_aus %&gt;% 
+aus_holiday %&gt;% 
   model(ETS(Trips)) %&gt;% 
   forecast(h = "3 years") %&gt;% 
-* autoplot(holiday_aus)
+* autoplot(aus_holiday)
 ```
 ]
 .right-plot[
@@ -529,6 +529,118 @@ data %&gt;%
 
 
 ![](resources/graph_temporal.png)
+
+---
+
+# Temporal aggregations of Australian holidays
+
+
+```r
+library(moment)
+aus_holiday_temporal &lt;- aus_holiday %&gt;% 
+* aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1)), Trips = sum(Trips))
+```
+
+.pull-left[
+
+```
+#&gt; # A tsibble: 140 x 2 [1Y, 2Q, 1Q]
+#&gt;     Quarter  Trips
+#&gt;    &lt;moment&gt;  &lt;dbl&gt;
+#&gt;  1     1998 39024.
+#&gt;  2     1999 38719.
+#&gt;  3     2000 38599.
+#&gt;  4     2001 37990.
+#&gt;  5     2002 38159.
+#&gt;  6     2003 37277.
+#&gt;  7     2004 37216.
+#&gt;  8     2005 34833.
+#&gt;  9     2006 37218.
+#&gt; 10     2007 37601.
+#&gt; # … with 130 more rows
+```
+]
+
+.pull-right[
+&lt;img src="figure/tourism-time-agg-plot-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+
+```r
+fc &lt;- aus_holiday_temporal %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 21 x 4 [1Y, 2Q, 1Q]
+#&gt; # Key:     .model [1]
+#&gt;    .model    Quarter             Trips  .mean
+#&gt;    &lt;chr&gt;    &lt;moment&gt;            &lt;dist&gt;  &lt;dbl&gt;
+#&gt;  1 ets          2018 N(44587, 1768165) 44587.
+#&gt;  2 ets          2019 N(44587, 3535974) 44587.
+#&gt;  3 ets          2020 N(44587, 5303783) 44587.
+#&gt;  4 ets    2018 Q3-Q4  N(24133, 490947) 24133.
+#&gt;  5 ets    2019 Q3-Q4  N(22168, 614810) 22168.
+#&gt;  6 ets    2020 Q3-Q4   N(25076, 8e+05) 25076.
+#&gt;  7 ets    2021 Q3-Q4 N(23110, 1060950) 23110.
+#&gt;  8 ets    2022 Q3-Q4 N(26019, 1408284) 26019.
+#&gt;  9 ets    2023 Q3-Q4 N(24053, 1855035) 24053.
+#&gt; 10 ets       2018 Q1  N(13088, 368663) 13088.
+#&gt; # … with 11 more rows
+```
+
+]
+
+.pull-right[
+&lt;img src="figure/tourism-time-agg-base-output-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
+
+--- 
+
+# Reconciling forecasts over time
+
+.pull-left[
+
+```r
+fc &lt;- aus_holiday_temporal %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+  reconcile(mint_ets = min_trace(ets)) %&gt;% 
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 42 x 4 [1Y, 2Q, 1Q]
+#&gt; # Key:     .model [2]
+#&gt;    .model      Quarter             Trips  .mean
+#&gt;    &lt;chr&gt;      &lt;moment&gt;            &lt;dist&gt;  &lt;dbl&gt;
+#&gt;  1 ets            2018 N(44587, 1768165) 44587.
+#&gt;  2 ets            2019 N(44587, 3535974) 44587.
+#&gt;  3 ets            2020 N(44587, 5303783) 44587.
+#&gt;  4 mint_ets       2018  N(45454, 461746) 45454.
+#&gt;  5 mint_ets       2019  N(46170, 743625) 46170.
+#&gt;  6 mint_ets       2020 N(46885, 1119338) 46885.
+#&gt;  7 ets      2018 Q3-Q4  N(24133, 490947) 24133.
+#&gt;  8 ets      2019 Q3-Q4  N(22168, 614810) 22168.
+#&gt;  9 ets      2020 Q3-Q4   N(25076, 8e+05) 25076.
+#&gt; 10 ets      2021 Q3-Q4 N(23110, 1060950) 23110.
+#&gt; # … with 32 more rows
+```
+
+]
+
+.pull-right[
+&lt;img src="figure/tourism-time-agg-coherent-output-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
 
 ---
 
