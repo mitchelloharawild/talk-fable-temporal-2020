@@ -1,0 +1,299 @@
+---
+title: "fable::ISF2020"
+subtitle: "Probabilistic cross-temporal hierarchies in fable"
+author: "Mitchell O'Hara-Wild"
+date: '27/10/2020'
+output:
+  xaringan::moon_reader:
+    chakra: ./libs/remark-latest.min.js
+    css: ["././libs/slides.css", "././libs/animate.css"]
+    lib_dir: ./libs
+    seal: false
+    nature:
+      highlightStyle: github
+      ratio: '16:9'
+      highlightLines: true
+      countIncrementalSlides: false 
+      beforeInit: ["./libs/jquery/jquery.min.js", "./libs/slides.js"]
+---
+class: inverse
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE, width = 120)
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(fontawesome)
+library(lubridate)
+library(htmltools)
+
+library(tsibble)
+library(fasster)
+library(fable)
+
+opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE, comment = "#>",
+  fig.path = 'figure/', cache.path = 'cache/', fig.align = 'center',
+  fig.width = 12, fig.height = 4, fig.show = 'hold',
+  cache = TRUE, external = TRUE, dev = 'svglite', dev.args = list(bg = "transparent")
+)
+
+mp4_vid <- function(src){
+  HTML(
+    paste0(
+      '<video autoplay>
+        <source src="', src, '" type="video/mp4">
+      </video>'
+    )
+  )
+}
+
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+   lines <- options$output.lines
+   if (is.null(lines)) {
+     return(hook_output(x, options))  # pass to default hook
+   }
+   x <- unlist(strsplit(x, "\n"))
+   more <- "..."
+   if (length(lines)==1) {        # first n lines
+     if (length(x) > lines) {
+       # truncate the output, but add ....
+       x <- c(head(x, lines), more)
+     }
+   } else {
+     x <- c(more, x[lines], more)
+   }
+   # paste these lines together
+   x <- paste(c(x, ""), collapse = "\n")
+   hook_output(x, options)
+ })
+
+theme_set(
+  theme_grey(base_size = 16) +
+  theme(
+    legend.position = "bottom",
+    plot.background = element_rect(fill = "transparent"),
+    legend.background = element_rect(fill = "transparent")
+  )
+)
+```
+
+
+```{css, echo=FALSE}
+/* custom.css */
+.left-code {
+  color: #777;
+  width: 40%;
+  height: 92%;
+  float: left;
+}
+.right-plot {
+  width: 58%;
+  float: right;
+  padding-left: 1%;
+}
+```
+
+
+.title[fable]
+.sticker-float[![fable](resources/fable.svg)]
+
+## Probabilistic cross-temporal hierarchies
+
+.bottom[
+### Mitchell O'Hara-Wild (`r fa("twitter", fill="#1da1f2")`[@mitchoharawild](https://twitter.com/mitchoharawild))
+### 27 October 2020
+### Slides @ [slides.mitchelloharawild.com/isf2020](https://slides.mitchelloharawild.com/isf2020)
+]
+
+---
+class: inverse
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/timezone.jpg")
+background-size: cover
+
+.title[Hello!]
+
+---
+class: inverse
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/timezone.jpg")
+background-size: cover
+
+# It's time to talk about time.
+
+---
+class: inverse
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/sparks.jpg")
+background-size: cover
+
+# Presentation driven development
+
+A 'proof of concept' for what is to come.
+
+--
+
+![](resources/construction.gif)
+
+---
+class: center
+
+## Forecasting with the tidyverts
+
+.sticker[![fable](resources/fable.svg)]
+
+.animated.fadeIn[
+.sticker[![tsibbledata](resources/tsibbledata.svg)]
+.sticker[![feasts](resources/feasts.svg)]
+.sticker[![tsibble](resources/tsibble.svg)]
+
+## [tidyverts.org](http://www.tidyverts.org)
+]
+
+---
+
+class: top
+
+.sticker-float[![tsibble](resources/tsibble.svg)]
+
+# Tidy temporal data structure
+
+### Domestic tourism in Australia
+
+```{r tourism-data, echo = TRUE}
+library(tsibble)
+tourism
+```
+
+---
+
+class: top
+
+.sticker-float[![feasts](resources/feasts.svg)]
+
+# A peak at the features
+
+### Compute features relating to STL decompositions
+
+```{r tourism-features, echo = TRUE}
+library(feasts)
+tourism_features <- tourism %>% 
+  features(Trips, feature_set(tags = "stl"))
+```
+
+```{r tourism-features-print, echo = FALSE}
+tourism_features
+```
+
+---
+
+class: top
+
+.sticker-float[![ggplot2](resources/ggplot2.svg)]
+
+# A peak at the features
+
+.full-width[
+```{r tourism-features-plot, echo = TRUE}
+library(ggplot2)
+tourism_features %>% 
+  ggplot(aes(x = trend_strength, y = seasonal_strength_year, colour = Purpose)) + 
+  geom_point() + stat_density_2d(aes(fill = Purpose, alpha = ..level..), bins = 5, geom = "polygon") + 
+  facet_wrap(vars(Purpose), nrow = 1) + coord_equal() + xlim(c(0,1)) + ylim(c(0,1))
+```
+]
+
+---
+
+class: top
+
+.sticker-float[![tsibble](resources/tsibble.svg)].sticker-float[![dplyr](resources/dplyr.svg)]
+
+# Total holidays across Australia
+
+### Starting from the top
+
+```{r tourism-total, echo = TRUE, fig.show='hide'}
+library(dplyr)
+holiday_aus <- tourism %>% 
+  filter(Purpose == "Holiday") %>% 
+  summarise(Trips = sum(Trips))
+
+holiday_aus %>% 
+  autoplot(Trips)
+```
+
+.flex-row[
+```{r tourism-total-print, echo = FALSE}
+holiday_aus
+```
+.full-width[
+```{r tourism-total-plot, echo = FALSE}
+holiday_aus %>% 
+  autoplot(Trips)
+```
+]
+]
+
+---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### Look at the data
+
+<br>
+
+.left-code[
+```{r tourism-total-ets-data, eval=FALSE, echo=TRUE}
+holiday_aus #<<
+```
+]
+.right-plot[
+```{r tourism-total-ets-data-output, ref.label="tourism-total-ets-data", echo=FALSE, cache=TRUE, fig.height = 6}
+```
+]
+
+---
+
+class: inverse, center
+
+# Acknowledgements
+
+.pull-left[
+.face-border[![Rob Hyndman](https://pbs.twimg.com/profile_images/1103150025981321216/dV3Wz_ql_400x400.png)]
+
+Rob Hyndman
+]
+.pull-right[
+.face-border[![Earo Wang](https://pbs.twimg.com/profile_images/1122341439063519233/YanRXXLu_400x400.jpg)]
+
+Earo Wang
+]
+
+---
+
+class: inverse, top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Thanks! `r fa("comments", fill = "white")`]
+
+<br>
+
+.larger[
+`r fa("globe", fill = "white")` Learn more: [fable.tidyverts.org](https://fable.tidyverts.org/)
+
+`r fa("chart-line", fill = "white")` Keep updated: [tidyverts.org](http://www.tidyverts.org)
+
+`r fa("desktop", fill = "white")` Review slides: [slides.mitchelloharawild.com/isf2020](https://slides.mitchelloharawild.com/isf2020)
+
+<br>
+
+.bottom[This work is licensed as `r fa("creative-commons", fill="white")` BY-NC 4.0.]
+]
