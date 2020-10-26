@@ -126,28 +126,32 @@ background-size: cover
 
 ---
 class: inverse
-background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/sparks.jpg")
+background-image: linear-gradient(to right, rgba(50, 50, 50, .1), rgba(200, 200, 200, .4)), url("resources/sparks.jpg")
 background-size: cover
 
 # Presentation driven development
 
 A 'proof of concept' for what is to come.
 
+**Everything** is subject to change, suggestions encouraged.
+
 --
 
-![](resources/construction.gif)
+.sticker-float[![wip](resources/construction.gif)]
 
 ---
 class: center
 
-## Forecasting with the tidyverts
+## What is fable?
 
 .sticker[![fable](resources/fable.svg)]
 
+--
+
 .animated.fadeIn[
+.sticker[![tsibble](resources/tsibble.svg)]
 .sticker[![tsibbledata](resources/tsibbledata.svg)]
 .sticker[![feasts](resources/feasts.svg)]
-.sticker[![tsibble](resources/tsibble.svg)]
 
 ## [tidyverts.org](http://www.tidyverts.org)
 ]
@@ -259,7 +263,228 @@ holiday_aus #<<
 ```
 ]
 
+
 ---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### Specify and estimate a model
+
+<br>
+
+.left-code[
+```{r tourism-total-ets-model, eval=FALSE, echo=TRUE}
+holiday_aus %>% 
+  model(ETS(Trips)) #<<
+```
+]
+.right-plot[
+```{r tourism-total-ets-model-output, ref.label="tourism-total-ets-model", echo=FALSE, cache=TRUE, fig.height = 6}
+```
+]
+
+---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### Make some forecasts
+
+<br>
+
+.left-code[
+```{r tourism-total-ets-forecast, eval=FALSE, echo=TRUE}
+holiday_aus %>% 
+  model(ETS(Trips)) %>% 
+  forecast(h = "3 years") #<<
+```
+]
+.right-plot[
+```{r tourism-total-ets-forecast-output, ref.label="tourism-total-ets-forecast", echo=FALSE, cache=TRUE, fig.height = 6}
+```
+]
+
+---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### See the results!
+
+<br>
+
+.left-code[
+```{r tourism-total-ets-plot, eval=FALSE, echo=TRUE}
+holiday_aus %>% 
+  model(ETS(Trips)) %>% 
+  forecast(h = "3 years") %>% 
+  autoplot(holiday_aus) #<<
+```
+]
+.right-plot[
+```{r tourism-total-ets-plot-output, ref.label="tourism-total-ets-plot", echo=FALSE, cache=TRUE, fig.height = 6}
+```
+]
+
+---
+class: inverse, center
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(50, 50, 50, .5)), url("resources/hierarchy.jpg")
+background-size: cover
+
+# Forecasting hierarchical series
+
+--
+
+`aggregate_key()`
+
+---
+
+# Forecasting hierarchical series
+
+```{r, eval = FALSE, echo = TRUE}
+data %>% 
+  aggregate_key(grp_a / grp_b, y = sum(y))
+```
+
+
+![](resources/graph_hierarchy.png)
+
+---
+
+# Consider tourism by state
+
+```{r ausmap, echo=FALSE, message=FALSE, fig.height=5}
+library(sf)
+# Use Okabe-Ito color-blind friendly color palette
+state_colors <- c(
+  `New South Wales` = "#56b4e9",
+  `Victoria` = "#0072b2",
+  `Queensland` = "#009e73",
+  `South Australia` = "#f0e442",
+  `Northern Territory` = "#d55e00",
+  `Western Australia` = "#e69f00",
+  `Tasmania` = "#cc79a7",
+  `Australian Capital Territory` = "#cccccc"
+)
+read_sf("tourism/Tourism_Regions_2020.shp") %>%
+  rename(State = "STE_NAME16") %>%
+  ggplot() +
+  geom_sf(aes(fill = State), alpha = 0.8) +
+  theme_void() +
+  scale_fill_manual(values = state_colors)
+```
+
+.footnote[*Map courtesy of Rob Hyndman*]
+---
+
+# Consider tourism by state
+
+.pull-left[
+```{r tourism-agg, echo = TRUE}
+tourism_state <- tourism %>% 
+  aggregate_key(State, Trips = sum(Trips)) #<<
+```
+
+```{r tourism-agg-print, echo = FALSE}
+tourism_state
+```
+]
+
+.pull-right[
+```{r tourism-agg-plot, fig.height = 8, fig.width = 8}
+autoplot(tourism_state) + scale_y_log10()
+```
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+```{r tourism-agg-base, echo = TRUE, cache = TRUE}
+fc <- tourism_state %>% 
+  model(ets = ETS(Trips)) %>% 
+  forecast(h = "3 years")
+```
+
+```{r tourism-agg-base-print, echo = FALSE}
+fc
+```
+
+]
+
+.pull-right[
+```{r tourism-agg-base-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc %>% 
+  autoplot(tourism_state)
+```
+
+]
+
+---
+
+# Reconciling forecasts by state
+
+.pull-left[
+```{r tourism-agg-coherent, echo = TRUE, cache = TRUE}
+fc_coherent <- tourism_state %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% #<<
+  forecast(h = "3 years")
+```
+
+```{r tourism-agg-coherent-print, echo = FALSE}
+fc_coherent
+```
+
+]
+
+.pull-right[
+```{r tourism-agg-coherent-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc_coherent %>% 
+  autoplot(tourism_state, level = NULL)
+```
+
+]
+
+---
+class: inverse, center
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(50, 50, 50, .5)), url("resources/many_clocks.jpg")
+background-size: cover
+
+# Forecasting temporal granularities
+
+--
+
+`aggregate_index()`
+
+---
+
+# Forecasting temporal granularities
+
+.float-right[![wip](resources/construction.gif)]
+
+```{r, eval = FALSE, echo = TRUE}
+library(moment) # pkg.mitchelloharawild.com/moment/
+data %>% 
+  aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1), tu_month(1)), y = sum(y))
+```
+
+
+![](resources/graph_temporal.png)
+
+---
+
 
 class: inverse, center
 
@@ -277,8 +502,9 @@ Earo Wang
 ]
 
 ---
-
 class: inverse, top
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
 
 .sticker-float[![fable](resources/fable.svg)]
 

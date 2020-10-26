@@ -61,28 +61,32 @@ background-size: cover
 
 ---
 class: inverse
-background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/sparks.jpg")
+background-image: linear-gradient(to right, rgba(50, 50, 50, .1), rgba(200, 200, 200, .4)), url("resources/sparks.jpg")
 background-size: cover
 
 # Presentation driven development
 
 A 'proof of concept' for what is to come.
 
+**Everything** is subject to change, suggestions encouraged.
+
 --
 
-![](resources/construction.gif)
+.sticker-float[![wip](resources/construction.gif)]
 
 ---
 class: center
 
-## Forecasting with the tidyverts
+## What is fable?
 
 .sticker[![fable](resources/fable.svg)]
 
+--
+
 .animated.fadeIn[
+.sticker[![tsibble](resources/tsibble.svg)]
 .sticker[![tsibbledata](resources/tsibbledata.svg)]
 .sticker[![feasts](resources/feasts.svg)]
-.sticker[![tsibble](resources/tsibble.svg)]
 
 ## [tidyverts.org](http://www.tidyverts.org)
 ]
@@ -259,7 +263,275 @@ class: top
 ```
 ]
 
+
 ---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### Specify and estimate a model
+
+&lt;br&gt;
+
+.left-code[
+
+```r
+holiday_aus %&gt;% 
+* model(ETS(Trips))
+```
+]
+.right-plot[
+
+```
+#&gt; # A mable: 1 x 1
+#&gt;   `ETS(Trips)`
+#&gt;        &lt;model&gt;
+#&gt; 1 &lt;ETS(M,N,M)&gt;
+```
+]
+
+---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### Make some forecasts
+
+&lt;br&gt;
+
+.left-code[
+
+```r
+holiday_aus %&gt;% 
+  model(ETS(Trips)) %&gt;% 
+* forecast(h = "3 years")
+```
+]
+.right-plot[
+
+```
+#&gt; # A fable: 12 x 4 [1Q]
+#&gt; # Key:     .model [1]
+#&gt;    .model     Quarter            Trips  .mean
+#&gt;    &lt;chr&gt;        &lt;qtr&gt;           &lt;dist&gt;  &lt;dbl&gt;
+#&gt;  1 ETS(Trips) 2018 Q1 N(13088, 368663) 13088.
+#&gt;  2 ETS(Trips) 2018 Q2 N(10909, 288993) 10909.
+#&gt;  3 ETS(Trips) 2018 Q3 N(10442, 294873) 10442.
+#&gt;  4 ETS(Trips) 2018 Q4 N(10624, 336446) 10624.
+#&gt;  5 ETS(Trips) 2019 Q1 N(13088, 558216) 13088.
+#&gt;  6 ETS(Trips) 2019 Q2 N(10909, 420721) 10909.
+#&gt;  7 ETS(Trips) 2019 Q3 N(10442, 415586) 10442.
+#&gt;  8 ETS(Trips) 2019 Q4 N(10624, 461447) 10624.
+#&gt;  9 ETS(Trips) 2020 Q1 N(13088, 747978) 13088.
+#&gt; 10 ETS(Trips) 2020 Q2 N(10909, 552594) 10909.
+#&gt; 11 ETS(Trips) 2020 Q3 N(10442, 536433) 10442.
+#&gt; 12 ETS(Trips) 2020 Q4 N(10624, 586585) 10624.
+```
+]
+
+---
+
+class: top
+
+.sticker-float[![fable](resources/fable.svg)]
+
+# Forecasting with fable
+
+### See the results!
+
+&lt;br&gt;
+
+.left-code[
+
+```r
+holiday_aus %&gt;% 
+  model(ETS(Trips)) %&gt;% 
+  forecast(h = "3 years") %&gt;% 
+* autoplot(holiday_aus)
+```
+]
+.right-plot[
+&lt;img src="figure/tourism-total-ets-plot-output-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+class: inverse, center
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(50, 50, 50, .5)), url("resources/hierarchy.jpg")
+background-size: cover
+
+# Forecasting hierarchical series
+
+--
+
+`aggregate_key()`
+
+---
+
+# Forecasting hierarchical series
+
+
+```r
+data %&gt;% 
+  aggregate_key(grp_a / grp_b, y = sum(y))
+```
+
+
+![](resources/graph_hierarchy.png)
+
+---
+
+# Consider tourism by state
+
+&lt;img src="figure/ausmap-1.svg" style="display: block; margin: auto;" /&gt;
+
+.footnote[*Map courtesy of Rob Hyndman*]
+---
+
+# Consider tourism by state
+
+.pull-left[
+
+```r
+tourism_state &lt;- tourism %&gt;% 
+* aggregate_key(State, Trips = sum(Trips))
+```
+
+
+```
+#&gt; # A tsibble: 720 x 3 [1Q]
+#&gt; # Key:       State [9]
+#&gt;    Quarter State         Trips
+#&gt;      &lt;qtr&gt; &lt;chr*&gt;        &lt;dbl&gt;
+#&gt;  1 1998 Q1 &lt;aggregated&gt; 23182.
+#&gt;  2 1998 Q2 &lt;aggregated&gt; 20323.
+#&gt;  3 1998 Q3 &lt;aggregated&gt; 19827.
+#&gt;  4 1998 Q4 &lt;aggregated&gt; 20830.
+#&gt;  5 1999 Q1 &lt;aggregated&gt; 22087.
+#&gt;  6 1999 Q2 &lt;aggregated&gt; 21458.
+#&gt;  7 1999 Q3 &lt;aggregated&gt; 19914.
+#&gt;  8 1999 Q4 &lt;aggregated&gt; 20028.
+#&gt;  9 2000 Q1 &lt;aggregated&gt; 22339.
+#&gt; 10 2000 Q2 &lt;aggregated&gt; 19941.
+#&gt; # … with 710 more rows
+```
+]
+
+.pull-right[
+&lt;img src="figure/tourism-agg-plot-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+
+```r
+fc &lt;- tourism_state %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 108 x 5 [1Q]
+#&gt; # Key:     State, .model [9]
+#&gt;    State  .model Quarter         Trips .mean
+#&gt;    &lt;chr*&gt; &lt;chr&gt;    &lt;qtr&gt;        &lt;dist&gt; &lt;dbl&gt;
+#&gt;  1 ACT    ets    2018 Q1  N(701, 7651)  701.
+#&gt;  2 ACT    ets    2018 Q2  N(717, 8032)  717.
+#&gt;  3 ACT    ets    2018 Q3  N(734, 8440)  734.
+#&gt;  4 ACT    ets    2018 Q4  N(750, 8882)  750.
+#&gt;  5 ACT    ets    2019 Q1  N(767, 9368)  767.
+#&gt;  6 ACT    ets    2019 Q2  N(784, 9905)  784.
+#&gt;  7 ACT    ets    2019 Q3 N(800, 10503)  800.
+#&gt;  8 ACT    ets    2019 Q4 N(817, 11171)  817.
+#&gt;  9 ACT    ets    2020 Q1 N(833, 11919)  833.
+#&gt; 10 ACT    ets    2020 Q2 N(850, 12756)  850.
+#&gt; # … with 98 more rows
+```
+
+]
+
+.pull-right[
+&lt;img src="figure/tourism-agg-base-output-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
+
+---
+
+# Reconciling forecasts by state
+
+.pull-left[
+
+```r
+fc_coherent &lt;- tourism_state %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+* reconcile(mint_ets = min_trace(ets)) %&gt;%
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 216 x 5 [1Q]
+#&gt; # Key:     State, .model [18]
+#&gt;    State  .model Quarter         Trips .mean
+#&gt;    &lt;chr*&gt; &lt;chr&gt;    &lt;qtr&gt;        &lt;dist&gt; &lt;dbl&gt;
+#&gt;  1 ACT    ets    2018 Q1  N(701, 7651)  701.
+#&gt;  2 ACT    ets    2018 Q2  N(717, 8032)  717.
+#&gt;  3 ACT    ets    2018 Q3  N(734, 8440)  734.
+#&gt;  4 ACT    ets    2018 Q4  N(750, 8882)  750.
+#&gt;  5 ACT    ets    2019 Q1  N(767, 9368)  767.
+#&gt;  6 ACT    ets    2019 Q2  N(784, 9905)  784.
+#&gt;  7 ACT    ets    2019 Q3 N(800, 10503)  800.
+#&gt;  8 ACT    ets    2019 Q4 N(817, 11171)  817.
+#&gt;  9 ACT    ets    2020 Q1 N(833, 11919)  833.
+#&gt; 10 ACT    ets    2020 Q2 N(850, 12756)  850.
+#&gt; # … with 206 more rows
+```
+
+]
+
+.pull-right[
+&lt;img src="figure/tourism-agg-coherent-output-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
+
+---
+class: inverse, center
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(50, 50, 50, .5)), url("resources/many_clocks.jpg")
+background-size: cover
+
+# Forecasting temporal granularities
+
+--
+
+`aggregate_index()`
+
+---
+
+# Forecasting temporal granularities
+
+.float-right[![wip](resources/construction.gif)]
+
+
+```r
+library(moment) # pkg.mitchelloharawild.com/moment/
+data %&gt;% 
+  aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1), tu_month(1)), y = sum(y))
+```
+
+
+![](resources/graph_temporal.png)
+
+---
+
 
 class: inverse, center
 
@@ -277,8 +549,9 @@ Earo Wang
 ]
 
 ---
-
 class: inverse, top
+background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
 
 .sticker-float[![fable](resources/fable.svg)]
 
