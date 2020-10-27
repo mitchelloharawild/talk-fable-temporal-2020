@@ -599,11 +599,12 @@ fc &lt;- aus_holiday_temporal %&gt;%
 ]
 
 .pull-right[
+
 &lt;img src="figure/tourism-time-agg-base-output-1.svg" style="display: block; margin: auto;" /&gt;
 
 ]
 
---- 
+---
 
 # Reconciling forecasts over time
 
@@ -642,22 +643,149 @@ fc &lt;- aus_holiday_temporal %&gt;%
 
 ]
 
+
+---
+class: inverse, center
+background-image: linear-gradient(to bottom, rgba(50, 50, 50, .8), rgba(50, 50, 50, .5)), url("resources/clock_stack.jpg")
+background-size: cover
+
+# Cross-temporal forecast reconciliation
+
+--
+
+`aggregate_key() %&gt;% aggregate_index()`
+
 ---
 
+# Cross-temporal forecast reconciliation
 
-class: inverse, center
 
-# Acknowledgements
+```r
+data %&gt;% 
+  aggregate_key(grp_a / grp_b, y = sum(y)) %&gt;% 
+  aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1), tu_month(1)), y = sum(y))
+```
 
 .pull-left[
-.face-border[![Rob Hyndman](https://pbs.twimg.com/profile_images/1103150025981321216/dV3Wz_ql_400x400.png)]
-
-Rob Hyndman
+![](resources/graph_hierarchy.png)
 ]
 .pull-right[
-.face-border[![Earo Wang](https://pbs.twimg.com/profile_images/1122341439063519233/YanRXXLu_400x400.jpg)]
+![](resources/graph_temporal.png)
+]
+---
 
-Earo Wang
+# Purpose of travel at multiple granularities
+
+
+```r
+library(moment)
+tourism_purpose_temporal &lt;- tourism %&gt;% 
+* aggregate_key(Purpose, Trips = sum(Trips)) %&gt;%
+* aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips))
+```
+
+
+.pull-left[
+
+```
+#&gt; # A tsibble: 500 x 3 [1Y, 1Q]
+#&gt; # Key:       Purpose [5]
+#&gt;     Quarter Purpose       Trips
+#&gt;    &lt;moment&gt; &lt;chr*&gt;        &lt;dbl&gt;
+#&gt;  1     1998 Business     15474.
+#&gt;  2     1998 Holiday      39024.
+#&gt;  3     1998 Other         2820.
+#&gt;  4     1998 Visiting     26844.
+#&gt;  5     1998 &lt;aggregated&gt; 84162.
+#&gt;  6     1999 Business     15940.
+#&gt;  7     1999 Holiday      38719.
+#&gt;  8     1999 Other         3320.
+#&gt;  9     1999 Visiting     25508.
+#&gt; 10     1999 &lt;aggregated&gt; 83488.
+#&gt; # … with 490 more rows
+```
+]
+
+.pull-right[
+&lt;img src="figure/tourism-crosstemp-agg-plot-1.svg" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+
+```r
+fc &lt;- tourism_purpose_temporal %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 75 x 5 [1Y, 1Q]
+#&gt; # Key:     Purpose, .model [5]
+#&gt;    Purpose  .model  Quarter             Trips  .mean
+#&gt;    &lt;chr*&gt;   &lt;chr&gt;  &lt;moment&gt;            &lt;dist&gt;  &lt;dbl&gt;
+#&gt;  1 Business ets        2018   N(22296, 3e+06) 22296.
+#&gt;  2 Business ets        2019   N(22296, 6e+06) 22296.
+#&gt;  3 Business ets        2020 N(22296, 9078586) 22296.
+#&gt;  4 Business ets     2018 Q1   N(4937, 137658)  4937.
+#&gt;  5 Business ets     2018 Q2   N(5604, 209086)  5604.
+#&gt;  6 Business ets     2018 Q3   N(5888, 268396)  5888.
+#&gt;  7 Business ets     2018 Q4   N(5575, 293305)  5575.
+#&gt;  8 Business ets     2019 Q1    N(4937, 3e+05)  4937.
+#&gt;  9 Business ets     2019 Q2   N(5604, 367634)  5604.
+#&gt; 10 Business ets     2019 Q3   N(5888, 427147)  5888.
+#&gt; # … with 65 more rows
+```
+
+]
+
+.pull-right[
+
+&lt;img src="figure/tourism-crosstemp-agg-base-output-1.svg" style="display: block; margin: auto;" /&gt;
+
+]
+
+---
+
+# Reconciling forecasts over time
+
+.pull-left[
+
+```r
+fc &lt;- tourism_purpose_temporal %&gt;% 
+  model(ets = ETS(Trips)) %&gt;% 
+  reconcile(mint_ets = min_trace(ets)) %&gt;% 
+  forecast(h = "3 years")
+```
+
+
+```
+#&gt; # A fable: 150 x 5 [1Y, 1Q]
+#&gt; # Key:     Purpose, .model [10]
+#&gt;    Purpose  .model    Quarter             Trips  .mean
+#&gt;    &lt;chr*&gt;   &lt;chr&gt;    &lt;moment&gt;            &lt;dist&gt;  &lt;dbl&gt;
+#&gt;  1 Business ets          2018   N(22296, 3e+06) 22296.
+#&gt;  2 Business ets          2019   N(22296, 6e+06) 22296.
+#&gt;  3 Business ets          2020 N(22296, 9078586) 22296.
+#&gt;  4 Business mint_ets     2018  N(22431, 629048) 22431.
+#&gt;  5 Business mint_ets     2019 N(22803, 1115028) 22803.
+#&gt;  6 Business mint_ets     2020 N(23174, 1621665) 23174.
+#&gt;  7 Business ets       2018 Q1   N(4937, 137658)  4937.
+#&gt;  8 Business ets       2018 Q2   N(5604, 209086)  5604.
+#&gt;  9 Business ets       2018 Q3   N(5888, 268396)  5888.
+#&gt; 10 Business ets       2018 Q4   N(5575, 293305)  5575.
+#&gt; # … with 140 more rows
+```
+
+]
+
+.pull-right[
+&lt;img src="figure/tourism-crosstemp-agg-coherent-output-1.svg" style="display: block; margin: auto;" /&gt;
+
 ]
 
 ---

@@ -523,6 +523,7 @@ fc
 ]
 
 .pull-right[
+
 ```{r tourism-time-agg-base-output, echo=FALSE, cache=TRUE, fig.height = 10}
 fc %>% 
   autoplot(aus_holiday_temporal) + 
@@ -532,7 +533,7 @@ fc %>%
 
 ]
 
---- 
+---
 
 # Reconciling forecasts over time
 
@@ -560,22 +561,112 @@ fc %>%
 
 ]
 
+
+---
+class: inverse, center
+background-image: linear-gradient(to bottom, rgba(50, 50, 50, .8), rgba(50, 50, 50, .5)), url("resources/clock_stack.jpg")
+background-size: cover
+
+# Cross-temporal forecast reconciliation
+
+--
+
+`aggregate_key() %>% aggregate_index()`
+
 ---
 
+# Cross-temporal forecast reconciliation
 
-class: inverse, center
-
-# Acknowledgements
+```{r, eval = FALSE, echo = TRUE}
+data %>% 
+  aggregate_key(grp_a / grp_b, y = sum(y)) %>% 
+  aggregate_index(c(tu_year(1), tu_quarter(2), tu_quarter(1), tu_month(1)), y = sum(y))
+```
 
 .pull-left[
-.face-border[![Rob Hyndman](https://pbs.twimg.com/profile_images/1103150025981321216/dV3Wz_ql_400x400.png)]
-
-Rob Hyndman
+![](resources/graph_hierarchy.png)
 ]
 .pull-right[
-.face-border[![Earo Wang](https://pbs.twimg.com/profile_images/1122341439063519233/YanRXXLu_400x400.jpg)]
+![](resources/graph_temporal.png)
+]
+---
 
-Earo Wang
+# Purpose of travel at multiple granularities
+
+```{r tourism-crosstemp-agg, echo = TRUE}
+library(moment)
+tourism_purpose_temporal <- tourism %>% 
+  aggregate_key(Purpose, Trips = sum(Trips)) %>% #<<
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) #<<
+```
+
+
+.pull-left[
+```{r tourism-crosstemp-agg-print, echo = FALSE}
+tourism_purpose_temporal
+```
+]
+
+.pull-right[
+```{r tourism-crosstemp-agg-plot, fig.height = 5, fig.width = 8}
+autoplot(tourism_purpose_temporal) + scale_y_log10()
+```
+]
+
+---
+
+# Forecasting each series separately
+
+.pull-left[
+```{r tourism-crosstemp-agg-base, echo = TRUE, cache = TRUE}
+fc <- tourism_purpose_temporal %>% 
+  model(ets = ETS(Trips)) %>% 
+  forecast(h = "3 years")
+```
+
+```{r tourism-crosstemp-agg-base-print, echo = FALSE}
+fc
+```
+
+]
+
+.pull-right[
+
+```{r tourism-crosstemp-agg-base-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc %>% 
+  autoplot(tourism_purpose_temporal) + 
+  facet_grid(vars(fct_relevel(.interval, "1 quarter", after = Inf)),
+             scales = "free_y")
+```
+
+]
+
+---
+
+# Reconciling forecasts over time
+
+.pull-left[
+```{r tourism-crosstemp-agg-coherent, echo = TRUE, cache = TRUE}
+fc <- tourism_purpose_temporal %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years")
+```
+
+```{r tourism-crosstemp-agg-coherent-print, echo = FALSE}
+fc
+```
+
+]
+
+.pull-right[
+```{r tourism-crosstemp-agg-coherent-output, echo=FALSE, cache=TRUE, fig.height = 10}
+fc %>% 
+  autoplot(tourism_purpose_temporal, level = NULL) + 
+  facet_grid(vars(fct_relevel(.interval, "1 quarter", after = Inf)),
+             scales = "free_y")
+```
+
 ]
 
 ---
