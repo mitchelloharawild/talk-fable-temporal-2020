@@ -541,7 +541,7 @@ fc %>%
 ```{r tourism-time-agg-coherent, echo = TRUE, cache = TRUE}
 fc <- aus_holiday_temporal %>% 
   model(ets = ETS(Trips)) %>% 
-  reconcile(mint_ets = min_trace(ets)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% #<<
   forecast(h = "3 years")
 ```
 
@@ -649,7 +649,7 @@ fc %>%
 ```{r tourism-crosstemp-agg-coherent, echo = TRUE, cache = TRUE}
 fc <- tourism_purpose_temporal %>% 
   model(ets = ETS(Trips)) %>% 
-  reconcile(mint_ets = min_trace(ets)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% #<<
   forecast(h = "3 years")
 ```
 
@@ -671,6 +671,123 @@ fc %>%
 
 ---
 class: inverse, top
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Summary `r fa("search", fill = "white")`]
+
+```{r, eval = FALSE, echo = TRUE}
+library(tsibble) #<<
+library(moment)
+library(fable)
+tourism %>% #<<
+  aggregate_key(Purpose, Trips = sum(Trips)) %>%
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years")
+```
+
+Tidy temporal data suitable for the future of time series
+
+---
+class: inverse, top
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Summary `r fa("search", fill = "white")`]
+
+```{r, eval = FALSE, echo = TRUE}
+library(tsibble)
+library(moment) #<<
+library(fable)
+tourism %>% 
+  aggregate_key(Purpose, Trips = sum(Trips)) %>% #<<
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) %>% #<<
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years")
+```
+
+Produce aggregations of the data you want to forecast
+
+---
+class: inverse, top
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Summary `r fa("search", fill = "white")`]
+
+```{r, eval = FALSE, echo = TRUE}
+library(tsibble)
+library(moment)
+library(fable) #<<
+tourism %>% 
+  aggregate_key(Purpose, Trips = sum(Trips)) %>%
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) %>% 
+  model(ets = ETS(Trips)) %>% #<<
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years")
+```
+
+Use any model to fit the data*
+
+.bottom.footnote[*for coherent probabilistic forecasts, the model must forecasts with a Normal distribution]
+
+---
+class: inverse, top
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Summary `r fa("search", fill = "white")`]
+
+```{r, eval = FALSE, echo = TRUE}
+library(tsibble)
+library(moment)
+library(fable)
+tourism %>% 
+  aggregate_key(Purpose, Trips = sum(Trips)) %>%
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% #<<
+  forecast(h = "3 years")
+```
+
+Specify the reconciliation method to be used.
+
+---
+class: inverse, top
+background-image: linear-gradient(to right, rgba(50, 50, 50, .5), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
+background-size: cover
+
+.sticker-float[![fable](resources/fable.svg)]
+
+.title[Summary `r fa("search", fill = "white")`]
+
+```{r, eval = FALSE, echo = TRUE}
+library(tsibble)
+library(moment)
+library(fable)
+tourism %>% 
+  aggregate_key(Purpose, Trips = sum(Trips)) %>%
+  aggregate_index(c(tu_year(1), tu_quarter(1)), Trips = sum(Trips)) %>% 
+  model(ets = ETS(Trips)) %>% 
+  reconcile(mint_ets = min_trace(ets)) %>% 
+  forecast(h = "3 years") #<<
+```
+
+Produce cross-temporally reconciled forecasts!
+
+---
+class: inverse, top
 background-image: linear-gradient(to right, rgba(150, 150, 150, .1), rgba(150, 150, 150, .4)), url("resources/hourglass.jpg")
 background-size: cover
 
@@ -678,14 +795,14 @@ background-size: cover
 
 .title[Thanks! `r fa("comments", fill = "white")`]
 
-<br>
-
 .larger[
 `r fa("globe", fill = "white")` Learn more: [fable.tidyverts.org](https://fable.tidyverts.org/)
 
 `r fa("chart-line", fill = "white")` Keep updated: [tidyverts.org](http://www.tidyverts.org)
 
 `r fa("desktop", fill = "white")` Review slides: [slides.mitchelloharawild.com/isf2020](https://slides.mitchelloharawild.com/isf2020)
+
+`r fa("twitter", fill = "white")` Say hello: [@mitchoharawild](twitter.com/mitchoharawild/)
 
 <br>
 
